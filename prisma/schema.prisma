@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                         String       @id @default(uuid())
+  email                      String       @unique
+  passwordHash               String
+  name                       String
+  role                       UserRoleEnum @default(user)
+  isVerified                 Boolean      @default(false)
+  verificationToken          String?
+  verificationTokenExpiresAt DateTime?
+  resetToken                 String?
+  resetTokenExpiresAt        DateTime?
+  refreshTokenHash           String?
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
+  tasks                      Task[]
+}
+
+model Task {
+  id          String         @unique @default(uuid())
+  title       String
+  description String?
+  status      TaskStatusEnum
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+enum UserRoleEnum {
+  user
+  admin
+}
+
+enum TaskStatusEnum {
+  todo
+  in_progress
+  done
+}
