@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -13,7 +14,6 @@ import type { EmailService } from './email.service.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { User } from 'src/generated/prisma/client.js';
 import type { Response } from 'express';
-import type { StringValue } from 'ms';
 
 @Injectable()
 export class AuthService {
@@ -55,6 +55,40 @@ export class AuthService {
     };
   }
 
+  async verifyEmail(token: string, res: Response) {
+    const user = await this.usersService.findByVerificationToken(token);
+    if (!user || !user.verificationToken) {
+      throw new BadRequestException('Invalid verification token');
+    }
+    if (
+      user.verificationTokenExpiresAt &&
+      user.verificationTokenExpiresAt < new Date()
+    ) {
+      throw new BadRequestException(
+        'Verification token has expired. Please rquest a new one',
+      );
+    }
+    await this.usersService.update(user.id, {
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+      isVerified: true,
+    });
+    const tokens = await this.generateTokens(user);
+    await this.saveRefreshToken(user.id, tokens.refreshToken);
+    this.setRefreshTokenCookie(res, tokens.refreshToken);
+    return {
+      message:
+        'Verification was successful. You are being logged in automatically',
+      accessToken: tokens.accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    };
+  }
+
   async login(dto: LoginDto, res: Response) {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
@@ -85,6 +119,49 @@ export class AuthService {
         role: user.role,
       },
     };
+  }
+
+  async refresh(refreshToken: string, res: Response) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('No refresh token provided');
+    }
+
+    let payload: { sub: string; email: string };
+    try {
+      payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user || !user.refreshTokenHash) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    const tokenMatch = await bcrypt.compare(
+      refreshToken,
+      user.refreshTokenHash,
+    );
+    if (!tokenMatch) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const tokens = await this.generateTokens(user);
+    await this.saveRefreshToken(user.id, tokens.refreshToken);
+    this.setRefreshTokenCookie(res, tokens.refreshToken);
+
+    return {
+      accessToken: tokens.accessToken,
+    };
+  }
+
+  async logout(id: string, res: Response) {
+    await this.usersService.update(id, {
+      refreshTokenHash: null,
+    });
+    res.clearCookie('refresh_token');
+    return { message: 'Logged out successfully' };
   }
 
   private async generateTokens(user: User) {

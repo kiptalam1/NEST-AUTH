@@ -6,6 +6,12 @@ import { Prisma, type User } from '../generated/prisma/client.js';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) { }
 
+  async findByVerificationToken(token: string) {
+    return this.prisma.user.findFirst({
+      where: { verificationToken: token },
+    });
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
