@@ -6,13 +6,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import type { RegisterDto } from './dto/register.dto.js';
-import type { UsersService } from 'src/users/users.service.js';
-import type { EmailService } from './email.service.js';
+import { UsersService } from '../users/users.service.js';
+import { EmailService } from './email.service.js';
 import type { LoginDto } from './dto/login.dto.js';
-import type { User } from 'src/generated/prisma/client.js';
+import type { User } from '../generated/prisma/client.js';
 import type { Response } from 'express';
 
 @Injectable()

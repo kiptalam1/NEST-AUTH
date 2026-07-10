@@ -9,20 +9,22 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { Public } from 'src/common/decorators/public.decorator.js';
+import { Public } from '../common/decorators/public.decorator.js';
 import {
   ApiCookieAuth,
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
+  ApiQuery,
+  ApiOkResponse,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
-import type { AuthService } from './auth.service.js';
-import type { RegisterDto } from './dto/register.dto.js';
-import type { LoginDto } from './dto/login.dto.js';
-import type { Record } from '@prisma/client/runtime/client';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator.js';
-import type { User } from 'src/generated/prisma/client.js';
+import { AuthService } from './auth.service.js';
+import { RegisterDto } from './dto/register.dto.js';
+import { LoginDto } from './dto/login.dto.js';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import type { User } from '../generated/prisma/client.js';
+import type { access } from 'fs';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -38,15 +40,24 @@ export class AuthController {
 
   @Public()
   @ApiOperation({ summary: 'Verify email address' })
+  @ApiQuery({ name: 'token' })
   @Get('verify-email')
   async verifyEmail(
-    @Query() token: string,
+    @Query('token') token: string,
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.verifyEmail(token, res);
   }
 
   @Public()
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string' },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Login user and provide access + refresh tokens' })
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -85,6 +96,18 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user' })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        email: { type: 'string' },
+        name: { type: 'string' },
+        role: { type: 'string', enum: ['admin', 'role'] },
+        isVerified: { type: 'boolean' },
+      },
+    },
+  })
   me(@CurrentUser() user: User) {
     return {
       id: user.id,
