@@ -1,13 +1,19 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaClient } from "./generated/prisma/client.js";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { Injectable } from '@nestjs/common';
+import { PrismaClient } from './generated/prisma/client.js';
+import { PrismaNeon } from '@prisma/adapter-neon';
+// import { PrismaPg } from '@prisma/adapter-pg';
+// import { Pool } from '@neondatabase/serverless';
 
 @Injectable()
 export class PrismaService extends PrismaClient {
   constructor() {
-    const adapter = new PrismaPg({
-      connectionString: process.env.DATABASE_URL as string,
+    const adapter = new PrismaNeon({
+      connectionString: process.env.DATABASE_URL,
     });
-    super({ adapter });
+    super({
+      adapter,
+      log: ['error', 'warn', 'query'],
+    });
+    // console.log(process.env.DATABASE_URL);
   }
 }

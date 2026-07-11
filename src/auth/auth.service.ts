@@ -185,7 +185,7 @@ export class AuthService {
   private async saveRefreshToken(id: string, refresh: string) {
     const tokenHash = await bcrypt.hash(refresh, 12);
     await this.usersService.update(id, {
-      verificationToken: tokenHash,
+      refreshTokenHash: tokenHash,
     });
   }
 

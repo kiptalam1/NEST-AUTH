@@ -24,7 +24,6 @@ import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { User } from '../generated/prisma/client.js';
-import type { access } from 'fs';
 
 @ApiTags('Auth')
 @Controller('auth')
